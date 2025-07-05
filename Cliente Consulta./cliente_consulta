@@ -1,0 +1,146 @@
+"""
+- Interroga una API REST (HTTPS) cada n segundos
+- Verifica umbrales y alerta por consola / log
+- Resiliente a caídas de red o API (reintentos exponenciales)
+- Salida en vivo “tipo dashboard” en la terminal
+- Diseñado para Python ≥ 3.11
+"""
+
+from __future__ import annotations
+import argparse
+import asyncio
+import json
+import logging
+import signal
+import sys
+from datetime import datetime, timezone
+from typing import Any, Dict, List
+
+import aiohttp
+
+# Configuracion por defecto 
+DEFAULT_API_URL = "https://localhost:5000/api/datos"
+DEFAULT_INTERVAL = 5          # seg entre consultas
+DEFAULT_TIMEOUT = 10          # seg max espera HTTP
+MAX_RETRIES = 5               # reintentos antes de pausa larga
+BACKOFF_BASE = 2              # exponencial: 1, 2, 4, 8…
+
+THRESHOLDS: Dict[str, tuple[float, float]] = {
+    "temperatura": (5.0, 40.0),   # °C
+    "presion":     (950.0, 1050.0),  # hPa
+    "humedad":     (20.0, 80.0)    # %
+}
+
+# Logging 
+logging.basicConfig(
+    filename="cliente_consulta.log",
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+logger = logging.getLogger("ClienteConsulta")
+
+# Lógica de comprobación 
+def check_anomalies(sensor: Dict[str, Any]) -> List[str]:
+    """Devuelve lista de strings con anomalias detectadas para un sensor dado."""
+    alerts: List[str] = []
+    for key, (mn, mx) in THRESHOLDS.items():
+        val = sensor.get(key)
+        if val is None:
+            continue
+        if not (mn <= val <= mx):
+            alerts.append(f"{key.capitalize()} fuera de rango ({val}) [u ≈ {mn}–{mx}]")
+    return alerts
+
+# Visualización 
+def render_dashboard(datos: List[Dict[str, Any]]) -> None:
+    """Imprime tabla limpia en la terminal con la ultima lectura de cada sensor."""
+    if not sys.stdout.isatty():       # si no es TTY (p.ej. redirección a archivo), no limpia
+        return
+    print("\033[2J\033[H", end="")    # borrar pantalla ANSI
+    print("CLIENTE CONSULTA : Ultima actualizacion:",
+          datetime.now().strftime("%H:%M:%S"))
+    print("-" * 80)
+    header = f"{'ID':<6}{'Temperatura (°C)':<18}{'Presion (hPa)':<18}{'Humedad (%)':<14}{'Alertas'}"
+    print(header)
+    print("=" * 80)
+    for s in datos:
+        alerts = "; ".join(check_anomalies(s))
+        print(f"{s.get('id', '?'):<6}{s.get('temperatura', '?'):<18}"
+              f"{s.get('presion', '?'):<18}{s.get('humedad', '?'):<14}{alerts}")
+    print("-" * 80)
+    print("Umbrales:", json.dumps(THRESHOLDS))
+
+# Ciclo principal 
+async def fetch_loop(api_url: str, interval: int) -> None:
+    retry = 0
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=DEFAULT_TIMEOUT)) as session:
+        while True:
+            try:
+                async with session.get(api_url, ssl=False) as resp:
+                    if resp.status != 200:
+                        raise RuntimeError(f"Estado HTTP {resp.status}")
+                    datos = await resp.json(loads=json.loads)
+                    if not isinstance(datos, list):
+                        raise ValueError("Respuesta JSON no es lista de sensores")
+                    render_dashboard(datos)
+
+                    # Registrar anomalias
+                    for s in datos:
+                        for alerta in check_anomalies(s):
+                            msg = f"ALERTA sensor {s.get('id','?')}: {alerta}"
+                            print("⚠️ ", msg)
+                            logger.warning(msg)
+
+                    retry = 0  # exito -> reiniciamos contador de fallos
+                await asyncio.sleep(interval)
+
+            except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, RuntimeError) as e:
+                wait = BACKOFF_BASE ** min(retry, MAX_RETRIES)
+                logger.error(f"Error al consultar API ({e}); reintento en {wait}s")
+                print(f"❗ Error: {e}. Reintentando en {wait}s…")
+                await asyncio.sleep(wait)
+                retry += 1
+
+# Señales OS 
+def setup_signal_handlers(loop: asyncio.AbstractEventLoop) -> None:
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, lambda: asyncio.create_task(shutdown(loop, sig)))
+
+async def shutdown(loop: asyncio.AbstractEventLoop, sig: signal.Signals) -> None:
+    print(f"\nRecibida señal {sig.name}: cerrando…")
+    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    [task.cancel() for task in tasks]
+    await asyncio.gather(*tasks, return_exceptions=True)
+    loop.stop()
+
+# CLI 
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Cliente asincrono de consulta para monitoreo industrial")
+    p.add_argument("--api", default=DEFAULT_API_URL, help="URL completa del endpoint HTTPS")
+    p.add_argument("--interval", type=int, default=DEFAULT_INTERVAL, help="Segundos entre lecturas (≥1)")
+    p.add_argument("--thresholds", help="Ruta a JSON con umbrales personalizados")
+    return p.parse_args()
+
+def load_thresholds(path: str | None) -> None:
+    global THRESHOLDS
+    if path:
+        with open(path, "r", encoding="utf-8") as f:
+            THRESHOLDS = json.load(f)
+
+# main() 
+def main() -> None:
+    args = parse_args()
+    load_thresholds(args.thresholds)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    setup_signal_handlers(loop)
+    try:
+        loop.run_until_complete(fetch_loop(args.api, max(1, args.interval)))
+    finally:
+        loop.close()
+        print("Cliente detenido con exito")
+
+if __name__ == "__main__":
+    main()
+
