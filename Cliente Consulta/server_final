@@ -1,0 +1,80 @@
+"""
+Servidor Final : Plataforma IoT   (PUERTO 8000)
+- Escucha rutas REST para consultar los datos guardados en sensores.db
+- Puede generar (opcionalmente) lecturas sinteticas para pruebas rapidas
+"""
+
+from flask import Flask, jsonify, request
+import sqlite3
+import random, datetime
+
+DB_PATH = "sensores.db"
+PORT    = 8000
+
+app = Flask(__name__)
+
+# Conexion BD 
+def get_db_conn() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# ENDPOINTS 
+@app.route("/datos", methods=["GET"])
+def obtener_todos():
+    """
+    Devuelve TODAS las lecturas almacenadas.
+    Ejemplo de respuesta:
+    [
+      {"id":1,"fecha_hora":"2025-07-04 23:58:12",
+       "temperatura":27.5,"presion":1013.25,"humedad":45.0},
+      ...
+    ]
+    """
+    conn  = get_db_conn()
+    filas = conn.execute("SELECT * FROM datos_sensor").fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in filas])
+
+@app.route("/datos/filtro", methods=["GET"])
+def obtener_filtrados():
+    """
+    /datos/filtro?temperatura_min=30
+    Devuelve lecturas con temperatura > temperatura_min
+    """
+    t_min = request.args.get("temperatura_min", type=float, default=0.0)
+    conn  = get_db_conn()
+    filas = conn.execute(
+        "SELECT * FROM datos_sensor WHERE temperatura > ?", (t_min,)
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in filas])
+
+# Ruta opcional para pruebas 
+@app.route("/generar_dato", methods=["POST"])
+def generar_dato():
+    """
+    Inserta un registro aleatorio (cuando no tenga sensores TCP enviando aun) basta con hacer:
+        curl -X POST http://localhost:8000/generar_dato
+    """
+    dato = {
+        "id":          1,
+        "fecha_hora":  datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "temperatura": round(random.uniform(15, 45), 1),
+        "presion":     round(random.uniform(940, 1060), 2),
+        "humedad":     round(random.uniform(10, 90), 1),
+    }
+
+    conn = get_db_conn()
+    conn.execute(
+        "INSERT INTO datos_sensor (id, fecha_hora, temperatura, presion, humedad) "
+        "VALUES (:id, :fecha_hora, :temperatura, :presion, :humedad)",
+        dato,
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True, "dato": dato})
+
+if __name__ == "__main__":
+    print(f"→ Servidor Final REST  corriendo en http://127.0.0.1:{PORT}")
+    app.run(host="0.0.0.0", port=PORT, debug=True)
