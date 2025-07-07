@@ -10,3 +10,6 @@ def servidor_intermedio():
     if verify_data(data_bin):
         data_json = bin_to_json(data_bin)
         forward_data(data_json)
+
+def main():
+    servidor_intermedio()
