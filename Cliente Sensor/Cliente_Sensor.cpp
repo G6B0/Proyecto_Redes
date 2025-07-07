@@ -204,7 +204,7 @@ public:
 
 int main(int argc, char* argv[]) {
     std::string server_ip = "127.0.0.1";  // localhost por defecto
-    int server_port = 8080;               // puerto por defecto
+    int server_port = 5000;               // puerto por defecto
     int16_t sensor_id = 1;                // ID del sensor por defecto
     int interval = 5;                     // intervalo en segundos
     
