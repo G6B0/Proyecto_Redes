@@ -94,6 +94,7 @@ def handle_client_connection(connection, address):
             data_bin = process_single_message(data)
             if data_bin:
                 message_count += 1
+                connection.sendall(b'ACK')
                 yield data_bin
             
             # Limpiar buffer para el próximo mensaje
@@ -112,6 +113,7 @@ def receive_data():
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server_socket.bind((HOST, PORT))
         server_socket.listen(5)  # Permitir múltiples conexiones en cola
+        server_socket.settimeout(10.0) #Timeout para aceptar conexiones
         print(f" Servidor escuchando en {HOST}:{PORT}")
         
         while True:

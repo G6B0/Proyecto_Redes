@@ -50,3 +50,4 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             if data:
                 print('Datos recibidos:', data)
                 insertar_datos_json(data)
+                client_socket.sendall(b'ACK') #para robustes en el sistema
