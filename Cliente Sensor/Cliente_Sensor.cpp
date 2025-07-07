@@ -39,13 +39,12 @@ private:
         return sum;
     }
     
-    // Cifrado XOR simple (para demostración)
     void encryptData(SensorData& data, uint8_t key = 0xAB) {
-        uint8_t* ptr = reinterpret_cast<uint8_t*>(&data);
-        for (size_t i = 0; i < sizeof(SensorData) - sizeof(uint32_t); ++i) {
-            ptr[i] ^= key;
-        }
+    uint8_t* ptr = reinterpret_cast<uint8_t*>(&data);
+    for (size_t i = 0; i < 22; ++i) {  // Solo cifrar bytes 0 a 21
+        ptr[i] ^= key;
     }
+}
     
     // Generar datos simulados del sensor
     SensorData generateSensorData() {
@@ -110,8 +109,8 @@ public:
             return false;
         }
         
-        std::cout << "✅ Conectado al servidor " << server_ip << ":" << server_port << std::endl;
-        std::cout << "📡 Sensor ID: " << sensor_id << std::endl;
+        std::cout << " Conectado al servidor " << server_ip << ":" << server_port << std::endl;
+        std::cout << " Sensor ID: " << sensor_id << std::endl;
         return true;
     }
     
@@ -119,13 +118,13 @@ public:
         if (sock >= 0) {
             close(sock);
             sock = -1;
-            std::cout << "🔌 Desconectado del servidor" << std::endl;
+            std::cout << " Desconectado del servidor" << std::endl;
         }
     }
     
     bool sendSensorData() {
         if (sock < 0) {
-            std::cerr << "❌ No hay conexión activa" << std::endl;
+            std::cerr << " No hay conexión activa" << std::endl;
             return false;
         }
         
@@ -133,7 +132,7 @@ public:
         SensorData data = generateSensorData();
         
         // Mostrar datos antes del cifrado
-        std::cout << "\n📊 Enviando datos del sensor:" << std::endl;
+        std::cout << "\n Enviando datos del sensor:" << std::endl;
         std::cout << "   ID: " << data.id << std::endl;
         std::cout << "   Timestamp: " << data.timestamp << std::endl;
         std::cout << "   Temperatura: " << std::fixed << std::setprecision(2) << data.temperatura << "°C" << std::endl;
@@ -147,20 +146,20 @@ public:
         // Enviar datos
         ssize_t bytes_sent = send(sock, &data, sizeof(data), 0);
         if (bytes_sent < 0) {
-            std::cerr << "❌ Error enviando datos" << std::endl;
+            std::cerr << " Error enviando datos" << std::endl;
             return false;
         }
         
         if (bytes_sent != sizeof(data)) {
-            std::cerr << "⚠️  Advertencia: Solo se enviaron " << bytes_sent << " de " << sizeof(data) << " bytes" << std::endl;
+            std::cerr << "  Advertencia: Solo se enviaron " << bytes_sent << " de " << sizeof(data) << " bytes" << std::endl;
         }
         
-        std::cout << "✅ Datos enviados correctamente (" << bytes_sent << " bytes)" << std::endl;
+        std::cout << " Datos enviados correctamente (" << bytes_sent << " bytes)" << std::endl;
         return true;
     }
     
     bool reconnect() {
-        std::cout << "🔄 Intentando reconectar..." << std::endl;
+        std::cout << " Intentando reconectar..." << std::endl;
         disconnect();
         
         // Esperar un poco antes de reconectar
@@ -172,22 +171,22 @@ public:
     void runContinuous(int interval_seconds = 5, int max_failures = 3) {
         int consecutive_failures = 0;
         
-        std::cout << "🚀 Iniciando envío continuo cada " << interval_seconds << " segundos" << std::endl;
-        std::cout << "⏹️  Presiona Ctrl+C para detener" << std::endl;
+        std::cout << " Iniciando envío continuo cada " << interval_seconds << " segundos" << std::endl;
+        std::cout << " Presiona Ctrl+C para detener" << std::endl;
         
         while (true) {
             if (!sendSensorData()) {
                 consecutive_failures++;
-                std::cout << "❌ Fallo #" << consecutive_failures << " de " << max_failures << std::endl;
+                std::cout << " Fallo #" << consecutive_failures << " de " << max_failures << std::endl;
                 
                 if (consecutive_failures >= max_failures) {
-                    std::cout << "🔄 Demasiados fallos consecutivos, intentando reconectar..." << std::endl;
+                    std::cout << " Demasiados fallos consecutivos, intentando reconectar..." << std::endl;
                     
                     if (reconnect()) {
                         consecutive_failures = 0;
-                        std::cout << "✅ Reconexión exitosa" << std::endl;
+                        std::cout << " Reconexión exitosa" << std::endl;
                     } else {
-                        std::cout << "❌ Fallo en reconexión, esperando..." << std::endl;
+                        std::cout << " Fallo en reconexión, esperando..." << std::endl;
                         std::this_thread::sleep_for(std::chrono::seconds(10));
                         continue;
                     }
@@ -214,10 +213,10 @@ int main(int argc, char* argv[]) {
     if (argc >= 4) sensor_id = std::atoi(argv[3]);
     if (argc >= 5) interval = std::atoi(argv[4]);
     
-    std::cout << "🔧 Cliente Sensor IoT" << std::endl;
-    std::cout << "📡 Servidor: " << server_ip << ":" << server_port << std::endl;
-    std::cout << "🆔 Sensor ID: " << sensor_id << std::endl;
-    std::cout << "⏱️  Intervalo: " << interval << " segundos" << std::endl;
+    std::cout << " Cliente Sensor IoT" << std::endl;
+    std::cout << " Servidor: " << server_ip << ":" << server_port << std::endl;
+    std::cout << " Sensor ID: " << sensor_id << std::endl;
+    std::cout << " Intervalo: " << interval << " segundos" << std::endl;
     std::cout << "----------------------------------------" << std::endl;
     
     try {
@@ -225,7 +224,7 @@ int main(int argc, char* argv[]) {
         
         // Intentar conectar
         if (!client.connect()) {
-            std::cerr << "❌ No se pudo conectar al servidor" << std::endl;
+            std::cerr << " No se pudo conectar al servidor" << std::endl;
             return 1;
         }
         
@@ -233,7 +232,7 @@ int main(int argc, char* argv[]) {
         client.runContinuous(interval);
         
     } catch (const std::exception& e) {
-        std::cerr << "❌ Error: " << e.what() << std::endl;
+        std::cerr << " Error: " << e.what() << std::endl;
         return 1;
     }
     
