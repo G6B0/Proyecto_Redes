@@ -3,9 +3,6 @@ from config import EXPECTED_SIZE
 
 def verify_data(data_bin):
 
-    if len(data_bin) != EXPECTED_SIZE:
-        return False
-
     try:
         unpacked = struct.unpack('<hQfffI', data_bin)
     except struct.error as e:
@@ -18,10 +15,14 @@ def verify_data(data_bin):
     humedad = unpacked[4]
     checksum = unpacked[5]
 
-    data_without_checksum = data_bin[0:-4]
-    checksum_calculation = sum(data_without_checksum)
+    #Calcular checksum igual que el emisor
+    calculated = (
+    id_sensor +
+    (timestamp & 0xFFFFFFFF) +
+    int(temperatura * 100) +
+    int(presion * 100) +
+    int(humedad * 100)
+    ) & 0xFFFFFFFF
 
-    if checksum_calculation != checksum:
-        return False
     
-    return True
+    return calculated == checksum
