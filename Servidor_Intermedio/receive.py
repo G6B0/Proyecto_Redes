@@ -17,5 +17,4 @@ def receive_data():
                     if not package:
                         raise ConnectionError("ERROR: Conexión cerrada inesperadamente.")
                     data = data + package
-
-    return data
+                yield data
