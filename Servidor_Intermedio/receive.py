@@ -21,50 +21,7 @@ def decrypt_data(data, key=0xAB):
         decrypted.extend(data[26:])
     
     return bytes(decrypted)
-
-def parse_sensor_data(data):
-    """
-    Deserializa los datos binarios a estructura SensorData
-    Layout correcto: id, timestamp, temperatura, presion, humedad, checksum
-    """
-    if len(data) != EXPECTED_SIZE:
-        raise ValueError(f"Tamaño de datos incorrecto: {len(data)} != {EXPECTED_SIZE}")
     
-   
-    
-    try:
-        # Según el layout real del compilador:
-        # int16_t id (offset 0)
-        id_sensor = struct.unpack('<h', data[0:2])[0]
-        
-        # uint64_t timestamp (offset 2)
-        timestamp = struct.unpack('<Q', data[2:10])[0]
-        
-        # float temperatura (offset 10)
-        temperatura = struct.unpack('<f', data[10:14])[0]
-        
-        # float presion (offset 14)
-        presion = struct.unpack('<f', data[14:18])[0]
-        
-        # float humedad (offset 18)
-        humedad = struct.unpack('<f', data[18:22])[0]
-        
-        # uint32_t checksum (offset 22)
-        checksum = struct.unpack('<I', data[22:26])[0]
-        
-        return {
-            'id': id_sensor,
-            'timestamp': timestamp,
-            'temperatura': temperatura,
-            'presion': presion,
-            'humedad': humedad,
-            'checksum': checksum
-        }
-    except struct.error as e:
-        raise ValueError(f"Error al deserializar datos: {e}")
-    except IndexError as e:
-        raise ValueError(f"Error de índice al deserializar: {e}")
-
 def calculate_checksum(sensor_data):
     """
     Calcula el checksum exactamente como lo hace el emisor:
@@ -95,10 +52,8 @@ def process_single_message(data):
         print(f"🔍 Bytes descifrados: {decrypted_data.hex()}")
 
         
-        # 2. Deserializar a estructura legible
-        sensor_data = parse_sensor_data(decrypted_data)
         
-        return sensor_data
+        return decrypted_data
         
     except Exception as e:
         print(f" Error procesando datos: {e}")
@@ -136,10 +91,10 @@ def handle_client_connection(connection, address):
             print(f" Mensaje #{message_count + 1} - Recibidos {len(data)} bytes")
             
             # Procesar el mensaje
-            sensor_data = process_single_message(data)
-            if sensor_data:
+            data_bin = process_single_message(data)
+            if data_bin:
                 message_count += 1
-                yield sensor_data
+                yield data_bin
             
             # Limpiar buffer para el próximo mensaje
             data = b""
