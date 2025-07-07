@@ -15,8 +15,8 @@ def insertar_datos_json(data_json_str):
     try:
 
         data = json.loads(data_json_str)
-        id_sensor = data['id_sensor']
-        fecha_hora = data['fecha_hora']
+        id_sensor = data['id']
+        timestamp = data['timestamp']
         temperatura = data['temperatura']
         presion = data['presion']
         humedad = data['humedad']
@@ -24,7 +24,7 @@ def insertar_datos_json(data_json_str):
 
             'INSERT INTO datos_sensor (id, fecha_hora, temperatura, presion, humedad) VALUES (?, ?, ?, ?, ?)',
 
-            (id_sensor, fecha_hora, temperatura, presion, humedad)
+            (id_sensor, timestamp, temperatura, presion, humedad)
 
         )
 
