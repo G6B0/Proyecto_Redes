@@ -41,6 +41,6 @@ Este proyecto solamente funciona en linux.
 
 `Cliente Sensor` a `Servidor_Intermedio`; HOST: Local (0.0.0.0), PORT: 5000
 
-`Servidor_Intermedio` a `Servidor_Final`; HOST: Local (127.0.0.1), PORT: 5001
+`Servidor_Intermedio` a `Servidor_Final`; HOST: (127.0.0.1), PORT: 5001
 
 `Servidor_Final` a `API`; HOST: Local (0.0.0.0), PORT: 5002
