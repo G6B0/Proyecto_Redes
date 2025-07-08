@@ -9,7 +9,7 @@ import sqlite3
 import random, datetime
 
 DB_PATH = "sensores.db"
-PORT    = 8000
+PORT    = 5002
 
 app = Flask(__name__)
 

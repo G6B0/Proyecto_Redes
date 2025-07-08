@@ -10,7 +10,7 @@ import aiohttp, asyncio, json
 from datetime import datetime
 import os, sys
 
-API_URL   = "http://localhost:8000/datos"   
+API_URL   = "http://localhost:5002/datos"   
 INTERVAL  = 5                               # segundos entre consultas
 
 THRESHOLDS = {
@@ -51,7 +51,7 @@ def imprimir_tabla(filas: list[dict]) -> None:
 
     # Muestra las 5 lecturas más recientes
     for r in filas[-5:]:
-        hora = r["fecha_hora"].split(" ")[1]          # HH:MM:SS
+        hora = datetime.fromtimestamp(int(r["fecha_hora"])).strftime("%H:%M:%S")
         al   = "; ".join(alertas(r))
         print(f"{r['id']:<6} {hora:<9} {r['temperatura']:<11.1f} "
               f"{r['presion']:<14.2f} {r['humedad']:<12.1f} {al}")
