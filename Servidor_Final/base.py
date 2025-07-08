@@ -7,7 +7,7 @@ def create_database():
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS datos_sensor (
         id INTEGER,
-        timestamp REAL,
+        fecha_hora REAL,
         temperatura REAL,
         presion REAL,
         humedad REAL
