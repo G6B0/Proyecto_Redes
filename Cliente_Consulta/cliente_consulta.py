@@ -10,7 +10,7 @@ import aiohttp, asyncio, json
 from datetime import datetime
 import os, sys
 
-API_URL   = "http://localhost:5002/datos"   
+API_URL   = "http://localhost:5002/datos"
 INTERVAL  = 5                               # segundos entre consultas
 
 THRESHOLDS = {
