@@ -54,3 +54,7 @@ Este proyecto solamente funciona en linux.
 `Servidor_Intermedio` a `Servidor_Final`; HOST: (127.0.0.1), PORT: 5001
 
 `Servidor_Final` a `API`; HOST: Local (0.0.0.0), PORT: 5002
+
+## Para la visualización del html
+
+Se debe entrar a  http://localhost:5002/ y luego hacer click en Actualizar Datos
