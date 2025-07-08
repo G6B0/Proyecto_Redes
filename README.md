@@ -37,12 +37,10 @@ Este proyecto solamente funciona en linux.
      ./Sensor
      ```
 
-## HOST y PORT Utilizados:
+## HOST y PORT utilizados:
 
-HOST: Local (0.0.0.0)
+`Cliente Sensor` a `Servidor_Intermedio`; HOST: Local (0.0.0.0), PORT: 5000
 
-`Cliente Sensor` a `Servidor_Intermedio`; PORT: 5000
+`Servidor_Intermedio` a `Servidor_Final`; HOST: Local (127.0.0.1), PORT: 5001
 
-`Servidor_Intermedio` a `Servidor_Final`; PORT: 5001
-
-`Servidor_Final` a `API`; PORT: 5002
+`Servidor_Final` a `API`; HOST: Local (0.0.0.0), PORT: 5002
